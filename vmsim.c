@@ -1,6 +1,6 @@
 // Elijah Greig
 // 3128908
-// Submitted on: Feb 15 2025
+// Submitted on: 
 // File: vmsim.c | Source file for vmsim application
 
 #include <stdio.h>
@@ -12,7 +12,7 @@ void usage(){
     printf("Usage: ./vmsim \n --mode=bb  --base=N --limit=N --trace=FILE \n --mode=seg --config=FILE --trace=FILE \n");
 }
 
-int main(){
+int main(int argc, char **argv){
     // parse CLI
     // Check if number of args is valid
     if (argc > 5 || argc < 4){
@@ -30,7 +30,7 @@ int main(){
         mode = 2;
     }
     else if (!mode){
-        printf("Mode provided was not valid.\n")
+        printf("Mode provided was not valid.\n");
         usage();
         return 1;
     }
@@ -38,35 +38,39 @@ int main(){
     switch (mode){
 
         // bb
-        case 1:
+        case 1: {
             int base;
             int limit;
             char* filename;
 
             // ensure next argument is base
-            if (strncmp(argv[2], "--base=", 7) == 0){ // comparing first 7 characters of the arg string for correct usage    
-                if (!isdigit(argv[2]+7)) {
-                    printf("Base provided was not a valid number.\n")
+            if (strncmp(argv[2], "--base=", 7) == 0){ // comparing first 7 characters of the arg string for correct usage  
+
+                char* end;
+                long base = strtol(argv[2]+7, &end, 10); // strtol returns the numbers within the string as a long
+                
+                if ((argv[2]+7) == end) { // "end" will equal the original string if the operation failed (invalid input)
+                    printf("Base provided was not a valid number.\n");
                     usage(); return 1;
                 }
-                base = atoi(argv[2]+7);
             }
-            
 
             // ensure next argument is limit
             if (strncmp(argv[3], "--limit=", 8) == 0){ // comparing first 7 characters of the arg string for correct usage    
-                if (!isdigit(argv[3]+8)) {
-                    printf("Limit provided was not a valid number.\n")
+
+                char* end;
+                long limit = strtol(argv[3]+8, &end, 10);
+
+                if ((argv[3] + 8) == end) { // "end" will equal the original string if the operation failed (invalid input)
+                    printf("Limit provided was not a valid number.\n");
                     usage(); return 1;
                 }
-                limit = atoi(argv[3]+8);
             }
             else { usage(); return 1; }
 
-
             // ensure next argument is trace
             if (strncmp(argv[4], "--trace=", 8) == 0){ // comparing first 5 characters of the arg string for correct usage
-                filename = malloc(strlen(argv[4] + 8) + 1); // moves pointer to count length of string past equals sign
+                filename = malloc(strlen(argv[4]+8) + 1); // moves pointer to count length of string past equals sign
                 if (filename == NULL) {
                         printf("Memory allocation failed");
                         return 1;
@@ -75,11 +79,24 @@ int main(){
                 // TODO: check file exists
             }
             else { usage(); return 1; }
+            
 
+            // Echo file
+            char* line = malloc(100); // To be dynamically allocated
+            FILE* file = fopen(filename, "r");
+
+            if (!file) {printf("Error opening file\n");}
+            
+            while (fgets(line, 100, file)){
+                if (line[0] != '#') {printf("%s", line);} 
+            }
+
+        }
+            
         break;
 
         // seg
-        case 2:
+        case 2: {
             char* filename_config;
             char* filename_trace;
 
@@ -108,22 +125,23 @@ int main(){
             else { usage(); return 1; }
 
             // Echo file
-            char line[100]; // To be dynamically allocated
+            char* line = malloc(100); 
             FILE* trace = fopen(filename_trace, "r");
             FILE* config = fopen(filename_config, "r");
+            
+            if (!trace) {printf("Error opening file\n");}
+            if (!config) {printf("Error opening file\n");}
 
-            fgets(line, sizeof(line), trace);
-            while (line){
-                if (line[0] != '#') {printf("%s", line)} 
-                fgets(line, sizeof(line), trace);
+            
+            while (fgets(line, 100, trace)){
+                if (line[0] != '#') {printf("%s", line);} 
             }
 
-            fgets(line, sizeof(line), config);
-            while (line){
-                if (line[0] != '#') {printf("%s", line)} 
-                fgets(line, sizeof(line), config);
+            while (fgets(line, 100, config)){
+                if (line[0] != '#') {printf("%s", line);} 
             }
-
+        }
+        
         break;
 
         // Should never be reached: 

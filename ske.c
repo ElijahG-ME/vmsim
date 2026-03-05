@@ -1,9 +1,4 @@
-/* ID Header:
- Student Name:
- Student ID:
- Submission Date:
- File:
-*/
+
 
 #include "vmsim.h"
 #include <stdio.h>

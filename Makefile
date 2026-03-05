@@ -1,6 +1,6 @@
 # Elijah Greig
 # 3128908
-# Submitted on: Feb 15 2025
+# Submitted on: 
 # File: Makefile | Makefile for vmsim application
 
 GCC= gcc
