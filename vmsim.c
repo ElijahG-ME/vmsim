@@ -8,38 +8,33 @@
 #include <string.h>
 #include <ctype.h>
 #include "parse.h"
+#include "vmsim.h"
 
 void usage(){
     printf("Usage: ./vmsim \n --mode=bb  --base=N --limit=N --trace=FILE \n --mode=seg --config=FILE --trace=FILE \n");
 }
 
-void bb_stats(int base, int bounds, struct access* a, int count){
+void bb_stats(struct access* a, int count){
+    printf("== stats ==\n");
+    int accesses = 0; int ok = 0; int faults = 0;
     for (int i = 0; i < count; i++){
-        char* result;
-        char op;
-        switch (a[i].o){
+        if (!a[i].dirty){
+            accesses++;
+        }
+        switch(a[i].result){
             case 0:
-                op = 'R';
+                ok++;
                 break;
             case 1:
-                op = 'W';
+                faults++;
                 break;
-        }
-        
-        switch (a[i].result){
-            case 0: 
-                result = "ok";
-                break;
-            case 1:
-                result = "fault: BOUNDS";
-                break;
-        }
-        printf("%c %d\t-> PA %d ; %s\n", op, a[i].address, a[i].address + base, result);
+        } 
     }
+    printf("accesses=%d, ok=%d, faults.bounds=%d\n", accesses, ok, faults);
+
 }
 
 void bb(int base, int bounds, char* filename){
-    int ok; // allowed accesses w/ no fault
 
     int count = count_accesses(filename);
     if (count == -1){
@@ -49,18 +44,8 @@ void bb(int base, int bounds, char* filename){
     struct access accesses[count];
     struct access *a = accesses;
     
-    get_accesses(filename, 1, a);
-
-    
-
-    // running operations
-    for (int i = 0; i < count; i++){
-        if (a[i].address < 0 || a[i].address > bounds){
-            a[i].result = BOUNDS;
-        }
-        else { a[i].result = OK; }
-    }
-    bb_stats(base, bounds, a, count);
+    run_accesses(base, bounds, filename, 1, a);
+    bb_stats(a, count);
 
     return;
     

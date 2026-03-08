@@ -10,33 +10,32 @@
 #include "vmsim.h"
 
 
-int count_accesses(char* filename){
-    FILE* file = fopen(filename, "r");
-    
-    if (file){
-        int count = 0;
-        char buffer[100]; // does not need to be dynamically allocated, will hold the whole line (or a portion of it) with fgets()
+int count_accesses(char* filename){// Count lines in file
+    // Arguments: filename
+    FILE* file;
+    int count = 0;
+    int last_char = '\n';
+    if (file = fopen(filename, "r")){
 
-        while(fgets(buffer, 100, file)){ // runs until EOF
-
-            if (strchr(buffer, '\n') == NULL && !feof(file)) { // checks if there is no newline in the buffer and that we are not at the end of the file
-                // means only a fragment of the whole line was taken
-                continue; // line was longer than buffer.
+        char ch = fgetc(file);
+        while (ch != EOF){
+            if (last_char == '\n') {
+                if (ch != '#') {count += 1;}
             }
-            if(buffer[0] != '#') {
-                count++; // add to access count
-            }
-
-            
-
+            last_char = ch;
+            ch = fgetc(file);
         }
-        return count;
 
+        rewind(file);
+        fclose(file);
     }
-    return -1; // failed to access file
+    else { // if file does not exist
+        return -1;
+    }
+    return count;
 }
 
-void get_accesses(char* filename, int mode, struct access* accesses){
+void run_accesses(int base, int bounds, char* filename, int mode, struct access* accesses){
     
     FILE* file = fopen(filename, "r");
 
@@ -44,11 +43,14 @@ void get_accesses(char* filename, int mode, struct access* accesses){
 
         int i = 0;
         char ch = fgetc(file);
+        int commented_lines = 0;
         while (ch != EOF){
             
             
             // if line begins with "#", skip to end of line
             if (ch == '#'){ 
+                // but keep track of this for an offset
+                commented_lines++;
                 
                 while (ch != '\n') {
                     ch = fgetc(file);
@@ -84,13 +86,40 @@ void get_accesses(char* filename, int mode, struct access* accesses){
             // tokenize line at spaces and take values into access
             char* op = strtok(line, " ");
 
-            if(strchr(op, 'R')) { accesses[i].o = READ;}
-            else if(strchr(op, 'W')) { accesses[i].o = WRITE;}
-            else if(strchr(op, 'X')) { accesses[i].o = EXECUTE;}
+            accesses[i].dirty = 0;
 
+            if(strchr(op, 'R')) { accesses[i].o = READ; op = "R";}
+            else if(strchr(op, 'W')) { accesses[i].o = WRITE; op = "W";}
+            else if(strchr(op, 'X')) { accesses[i].o = EXECUTE; op = "X";}
+            else { 
+                printf("trace: %s:%d, malformed: op must be R/W, got %s\n", filename, i + commented_lines, op);
+                accesses[i].dirty = 1;
+                free(line);
+                ch = fgetc(file); i++;
+                continue;
+            }
+            
             switch(mode){
                 case 1: { // bb
-                    accesses[i].address = atoi(strtok(NULL, " ")); 
+
+                    char* addr = strtok(NULL, " ");
+                    if (!addr) {
+                        printf("trace: %s:%d, malformed: expected 'OP ADDR' \n", filename, i + commented_lines);
+                        accesses[i].dirty = 1;
+                        break;
+                    }
+                    
+                    // check to make sure it is a valid decimal number
+                    for (int j = 0; addr[j] != '\0'; j++) {
+                        if (!isdigit(addr[j])) {
+                            printf("trace: %s:%d, bad address '%s' (not decimal) \n", filename, i + commented_lines, addr);
+                            accesses[i].dirty = 1;
+                            break;
+                        }
+                    }
+                 
+
+                    accesses[i].address = atoi(addr); 
                     break;
                 }
                 case 2: { //seg
@@ -98,6 +127,40 @@ void get_accesses(char* filename, int mode, struct access* accesses){
                     break;
                 }
             }
+
+            if (accesses[i].dirty) {
+                free(line);
+                ch = fgetc(file); i++;
+                continue;
+            }
+
+            
+            if (accesses[i].address < 0 || accesses[i].address > bounds){
+                accesses[i].result = BOUNDS;
+            }
+            else { accesses[i].result = OK; }
+        
+
+            char* result;
+            switch (accesses[i].o){
+                case 0:
+                    op = "R";
+                    break;
+                case 1:
+                    op = "W";
+                    break;
+            }
+            
+            switch (accesses[i].result){
+                case 0: 
+                    result = "ok";
+                    break;
+                case 1:
+                    result = "fault: BOUNDS";
+                    break;
+            }
+            printf("%s %d\t-> PA %d ; %s\n", op, accesses[i].address, accesses[i].address + base, result);
+        
 
             // free line for reuse then move to next line
             free(line);

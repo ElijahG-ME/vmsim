@@ -8,5 +8,5 @@
 #include "vmsim.h"
 
 int count_accesses(char* filename);
-int get_accesses(char* filename, int mode, struct access* accesses);
+int run_accesses(int base, int bounds, char* filename, int mode, struct access* accesses);
 #endif
