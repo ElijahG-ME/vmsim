@@ -9,7 +9,7 @@ VFLAGS = --leak-check=yes
 
 .PHONY: userclean clean valgrind
 
-all: vmsim.o 
+all: vmsim.o parse.o
 	$(GCC) $(CFLAGS) -o vmsim $^ 
 
 %.o: %.c

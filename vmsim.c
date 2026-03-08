@@ -7,14 +7,69 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "parse.h"
 
 void usage(){
     printf("Usage: ./vmsim \n --mode=bb  --base=N --limit=N --trace=FILE \n --mode=seg --config=FILE --trace=FILE \n");
 }
 
+void bb_stats(int base, int bounds, struct access* a, int count){
+    for (int i = 0; i < count; i++){
+        char* result;
+        char op;
+        switch (a[i].o){
+            case 0:
+                op = 'R';
+                break;
+            case 1:
+                op = 'W';
+                break;
+        }
+        
+        switch (a[i].result){
+            case 0: 
+                result = "ok";
+                break;
+            case 1:
+                result = "fault: BOUNDS";
+                break;
+        }
+        printf("%c %d\t-> PA %d ; %s\n", op, a[i].address, a[i].address + base, result);
+    }
+}
+
+void bb(int base, int bounds, char* filename){
+    int ok; // allowed accesses w/ no fault
+
+    int count = count_accesses(filename);
+    if (count == -1){
+        return;
+    }
+
+    struct access accesses[count];
+    struct access *a = accesses;
+    
+    get_accesses(filename, 1, a);
+
+    
+
+    // running operations
+    for (int i = 0; i < count; i++){
+        if (a[i].address < 0 || a[i].address > bounds){
+            a[i].result = BOUNDS;
+        }
+        else { a[i].result = OK; }
+    }
+    bb_stats(base, bounds, a, count);
+
+    return;
+    
+}
+
 int main(int argc, char **argv){
     // parse CLI
     // Check if number of args is valid
+
     if (argc > 5 || argc < 4){
         usage();
         return 1;
@@ -25,9 +80,11 @@ int main(int argc, char **argv){
 
     if (strcmp(argv[1], "--mode=bb") == 0){ 
         mode = 1;
+        if (argc != 5) {usage(); return 1;}
     }
     else if (strcmp(argv[1], "--mode=seg") == 0){
         mode = 2;
+        if (argc != 4) {usage(); return 1;}
     }
     else if (!mode){
         printf("Mode provided was not valid.\n");
@@ -37,17 +94,20 @@ int main(int argc, char **argv){
 
     switch (mode){
 
-        // bb
+        // bb mode
         case 1: {
-            int base;
-            int limit;
+            long base;
+            long limit;
             char* filename;
 
             // ensure next argument is base
             if (strncmp(argv[2], "--base=", 7) == 0){ // comparing first 7 characters of the arg string for correct usage  
 
+                // ensuring number isn't negative
+                if ((*(argv[2]+7) == '-')) {usage(); return 1;}
+
                 char* end;
-                long base = strtol(argv[2]+7, &end, 10); // strtol returns the numbers within the string as a long
+                base = strtol(argv[2]+7, &end, 10); // strtol returns the numbers within the string as a long
                 
                 if ((argv[2]+7) == end) { // "end" will equal the original string if the operation failed (invalid input)
                     printf("Base provided was not a valid number.\n");
@@ -55,11 +115,17 @@ int main(int argc, char **argv){
                 }
             }
 
+            //TODO: break switch into new functions
+
+
             // ensure next argument is limit
-            if (strncmp(argv[3], "--limit=", 8) == 0){ // comparing first 7 characters of the arg string for correct usage    
+            if (strncmp(argv[3], "--limit=", 8) == 0){ // comparing first 7 characters of the arg string for correct usage   
+                
+                // ensuring number isn't negative
+                if ((*(argv[2]+7) == '-')) {usage(); return 1;}
 
                 char* end;
-                long limit = strtol(argv[3]+8, &end, 10);
+                limit = strtol(argv[3]+8, &end, 10);
 
                 if ((argv[3] + 8) == end) { // "end" will equal the original string if the operation failed (invalid input)
                     printf("Limit provided was not a valid number.\n");
@@ -80,22 +146,24 @@ int main(int argc, char **argv){
             }
             else { usage(); return 1; }
             
-
-            // Echo file
+            /* Echo file
             char* line = malloc(100); // To be dynamically allocated
-            FILE* file = fopen(filename, "r");
+            
 
-            if (!file) {printf("Error opening file\n");}
+            if (!file) {printf("Error opening trace file\n"); return 1;}
             
             while (fgets(line, 100, file)){
                 if (line[0] != '#') {printf("%s", line);} 
-            }
+            }*/
+           bb(base, limit, filename);
 
         }
             
         break;
 
-        // seg
+
+
+        // seg mode
         case 2: {
             char* filename_config;
             char* filename_trace;
@@ -129,8 +197,8 @@ int main(int argc, char **argv){
             FILE* trace = fopen(filename_trace, "r");
             FILE* config = fopen(filename_config, "r");
             
-            if (!trace) {printf("Error opening file\n");}
-            if (!config) {printf("Error opening file\n");}
+            if (!trace) {printf("Error opening trace file\n"); return 1;}
+            if (!config) {printf("Error opening config file\n"); return 1;}
 
             
             while (fgets(line, 100, trace)){
