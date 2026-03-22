@@ -20,3 +20,25 @@ Memory checking: Memory leak checks can be performed with `make valgrind'.<br>
 ## Program Status<br>
 
 The program currently works as intended, with no known deficiencies or errors.<br>
+
+## Functionality<br>
+
+VMsim works in one of two modes with the proper arguments.<br>
+### Base & Bounds (BB):<br>
+       - The base and limit are recorded<br>
+       - The trace file is evaluated line by line, reading the access instructions<br>
+       - If malformed or invalid, an error message is printed<br>
+       - If valid, the successful operation will be printed<br>
+       - This repeats until EOF<br>
+       - Statistics about the operations including counts for successful accesses & faults are printed<br>
+
+### Segmentation (Seg):<br>
+       - The config file is read line by line<br>
+       - Objects for each segment are created<br>
+       - Information about each segment is recorded to its corresponding object, if applicable<br>
+       - Errors in file formatting are printed
+       - The trace file is read line by line<br>
+       - Access operations on each segment are performed if valid<br>
+       - If malformed or invalid, an error message is printed<br>
+       - Faults are recorded to the access if they occur, specified by type
+       - Statistics about the operations including counts for successful accesses & faults and fault types are printed<br>
