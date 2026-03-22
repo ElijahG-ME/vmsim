@@ -1,0 +1,6 @@
+R 16    -> PA 4112 ; ok
+trace: tests/bb/bad.txt:3, malformed: op must be R/W, got Q
+trace: tests/bb/bad.txt:4, bad address 'G1' (not decimal)
+trace: tests/bb/bad.txt:5, bad address '#' (not decimal)
+== stats ==
+accesses=1, ok=1, faults.bounds=0

@@ -1,0 +1,10 @@
+config: tests/seg/bad-config.ini:3 bad number in limit
+config: tests/seg/bad-config.ini:4 malformed: expected 'name base limit perms'
+X code 0        -> PA 4096 ; ok
+R heap 10       -> fault: NOSEG
+W code 1        -> fault: PROTECTION (needed 'w', have 'rx')
+R stack 65      -> fault: NOSEG
+== stats ==
+accesses=4, ok=1, faults.bounds=0
+faults.prot=1, faults.noseg=2
+seg_hits: code=1, heap=0, stack=0
